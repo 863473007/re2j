@@ -1372,10 +1372,14 @@ class Parser {
         return r;
 
         // Hexadecimal escapes.
-      case 'x':
+        // 2017-3-31 modification:
+        // Match "\\uxxxx" "\\u{xxxx}"
+        // Matches xxxx, where x is a Unicode character expressed as four hexadecimal digits. For example, \u00A9 matches the copyright symbol (©).
+      case 'x': case 'u':
         if (!t.more()) {
           break;
         }
+        int oc = c;
         c = t.pop();
         if (c == '{') {
           // Any number of digits in braces.
@@ -1415,8 +1419,18 @@ class Parser {
         if (x < 0 || y < 0) {
           break;
         }
-        return x * 16 + y;
-
+        if (oc == 'c') {
+          return x * 16 + y;
+        }
+        // Easy case: four hex digits.
+        c = t.pop();
+        int z = Utils.unhex(c);
+        c = t.pop();
+        int w = Utils.unhex(c);
+        if (z < 0 || w < 0) {
+          break;
+        }
+        return (x << 12) + (y << 8) + (z << 4) + w;
         // C escapes.  There is no case 'b', to avoid misparsing
         // the Perl word-boundary \b as the C backspace \b
         // when in POSIX mode.  In Perl, /\b/ means word-boundary
